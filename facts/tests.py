@@ -32,8 +32,8 @@ class SerializerTest(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('fact', serializer.errors)
         self.assertIn('length', serializer.errors)
-
-    def test_serializer_invalid_data_fact(self):
+    
+    def test_serializer_empty_data_fact_validlength(self):
         invalid_data = {
             'fact': '',
             'length': self.fake.random_int()
@@ -46,7 +46,7 @@ class SerializerTest(APITestCase):
     def test_serializer_non_positive_length(self):
         invalid_data = {
             'fact': self.fake.sentence(nb_words=15),
-            'length':-1
+            'length':-55
         }
         serializer = CatFactSerializer(data=invalid_data)
         self.assertFalse(serializer.is_valid())
