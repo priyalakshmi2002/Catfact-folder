@@ -4,7 +4,6 @@ from faker import Faker
 from django.core.exceptions import ImproperlyConfigured
 from unittest.mock import patch, MagicMock
 from .factories import CatFactFactory
-from django.test import override_settings
 from .models import CatFact
 from .views import FetchCatFactView
 from django.conf import settings
@@ -35,6 +34,8 @@ class SerializerTest(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('fact', serializer.errors)
         self.assertIn('length', serializer.errors)
+        self.assertEqual(serializer.errors['fact'][0], "Fact cannot be Empty.")
+        self.assertEqual(serializer.errors['length'][0], "A valid integer is required.")
     
     def test_serializer_empty_data_fact_validlength(self):
         '''Verifies unsuccessful validation of CatFactSerializer with empty fact and valid length'''
@@ -45,7 +46,8 @@ class SerializerTest(APITestCase):
         serializer = CatFactSerializer(data=invalid_data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('fact', serializer.errors) 
-        
+        self.assertEqual(serializer.errors['fact'][0], "Fact cannot be Empty.")
+    
     def test_serializer_non_positive_length(self):
         '''Verifies unsuccessful validation of CatFactSerializer with valid url and negative length'''
         invalid_data = {
@@ -54,7 +56,8 @@ class SerializerTest(APITestCase):
         }
         serializer = CatFactSerializer(data=invalid_data)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('length', serializer.errors) 
+        self.assertIn('length', serializer.errors)
+        self.assertEqual(serializer.errors['length'][0], "Length must be a positive integer.") 
 
 class FetchCatFactViewTest(APITestCase):
    
