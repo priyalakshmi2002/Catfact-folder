@@ -126,4 +126,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FETCH_URL = "https://catfact.ninja/fact"
 
-FETCH_FLAG = True
+FETCH_FLAG = {}

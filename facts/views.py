@@ -12,28 +12,18 @@ class FetchCatFactView:
     @classmethod
     def add_facts(self):
         logger.info("Fetching cat fact....")
-        # url to be a string
         url = getattr(settings, "FETCH_URL", None)
         fetch_flag = getattr(settings, "FETCH_FLAG", None)
-        if (url==None):
-            raise ImproperlyConfigured("FETCH_URL must not be None")
-        elif not isinstance(url, str):
-            raise ImproperlyConfigured("FETCH_URL must be a string")
-        if fetch_flag == None:
-            raise ImproperlyConfigured("FETCH_FLAG must not be None")
-        elif not isinstance(fetch_flag, bool):
-            raise ImproperlyConfigured("FETCH_FLAG must be a boolean")
-        
-        #flag as false
-        if not fetch_flag:
-            logger.info("Fetch is disabled in settings")
-            return []
-        
+        if not (url and fetch_flag):
+            raise ImproperlyConfigured("FETCH_URL and FETCH_FLAG must be valid")
+        elif not isinstance(url, str) or not isinstance(fetch_flag, bool):
+            raise ImproperlyConfigured("FETCH_URL must be a string and FETCH_FLAG must be a boolean")
+
         resultData = []
         for i in range(10):
             try:
                 response = requests.get(url)
-                response.raise_for_status()  # Raise an HTTPError for bad responses (4xx, 5xx)
+                response.raise_for_status() 
                 data = response.json()
                 serializer = CatFactSerializer(data=data)
                 if serializer.is_valid():

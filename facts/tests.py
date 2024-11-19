@@ -11,10 +11,12 @@ from django.conf import settings
 import requests
 
 class SerializerTest(APITestCase):
+    '''Verifies serilaizers'''
     def setUp(self):
         self.fake = Faker()
 
     def test_serializer_valid_data(self):
+        '''Verifies successful validation of CatFactSerializer with valid input'''
         data = {
             'fact': self.fake.sentence(nb_words=15),
             'length': self.fake.random_int()
@@ -24,6 +26,7 @@ class SerializerTest(APITestCase):
         self.assertEqual(serializer.validated_data, data)
         
     def test_serializer_empty_fact_and_length(self):
+        '''Verifies unsuccessful validation of CatFactSerializer with empty input'''
         data = {
             'fact': '',
             'length': ''  
@@ -34,16 +37,17 @@ class SerializerTest(APITestCase):
         self.assertIn('length', serializer.errors)
     
     def test_serializer_empty_data_fact_validlength(self):
+        '''Verifies unsuccessful validation of CatFactSerializer with empty fact and valid length'''
         invalid_data = {
             'fact': '',
             'length': self.fake.random_int()
         }
-    
         serializer = CatFactSerializer(data=invalid_data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('fact', serializer.errors) 
         
     def test_serializer_non_positive_length(self):
+        '''Verifies unsuccessful validation of CatFactSerializer with valid url and negative length'''
         invalid_data = {
             'fact': self.fake.sentence(nb_words=15),
             'length':-55
@@ -53,12 +57,10 @@ class SerializerTest(APITestCase):
         self.assertIn('length', serializer.errors) 
 
 class FetchCatFactViewTest(APITestCase):
-    
-    def setUp(self):
-        self.addCleanup(patch.stopall)  # Ensure patches are stopped after each test
-    
+   
     def test_add_facts_url_flag_successful_response(self):
-        with override_settings(FETCH_URL="https://api.example.com/catfacts", FETCH_FLAG=True):
+        '''Verifies successful response of FetchCatFactView on valid FETCH_URL and FETCH_FLAG'''
+        with self.settings(FETCH_URL="ejhfw", FETCH_FLAG=True):
             self.assertIsInstance(settings.FETCH_URL, str)
             self.assertIsInstance(settings.FETCH_FLAG, bool)  
             with patch('requests.get') as mock_get:
@@ -73,43 +75,43 @@ class FetchCatFactViewTest(APITestCase):
                 for fact in saved_facts:
                     self.assertEqual(fact.fact, mock_data['fact'])
                     self.assertEqual(fact.length, mock_data['length'])
-
-    def test_add_facts_disabled_fetch(self):
-        with override_settings(FETCH_URL="ht5656we",FETCH_FLAG=False):
-            self.assertIsInstance(settings.FETCH_URL, str)
-            with patch('requests.get') as mock_get:
-                # Test with FETCH_FLAG set to False
-                result = FetchCatFactView.add_facts()
-                mock_get.assert_not_called()
-                self.assertEqual(CatFact.objects.count(), 0)
-                self.assertEqual(result, [])
     
-    def test_none_fetch_url(self):
-        with override_settings(FETCH_URL=None,FETCH_FLAG=True):
-            with self.assertRaises(ImproperlyConfigured) as cm:
-                FetchCatFactView.add_facts()
-                self.assertEqual(str(cm.exception), "FETCH_URL must not be None")
-
-    def test_invalid_fetch_flag(self):
-        with override_settings(FETCH_URL="http/uqerje/wdjfh..",FETCH_FLAG="false"):         
-            with self.assertRaises(ImproperlyConfigured) as cm:
-                FetchCatFactView.add_facts()
-                self.assertEqual(str(cm.exception), "FETCH_FLAG must be a boolean")
-    
-    def test_none_fetch_flag(self):
-        with override_settings(FETCH_URL="http/uqerje/wdjfh..",FETCH_FLAG=None):
-            with self.assertRaises(ImproperlyConfigured) as cm:
-                FetchCatFactView.add_facts()
-                self.assertEqual(str(cm.exception), "FETCH_FLAG must not be None")            
-    
-    def test_invalid_fetch_url(self):
-        with override_settings(FETCH_URL=345,FETCH_FLAG=True):          
-            with self.assertRaises(ImproperlyConfigured) as cm:
-                FetchCatFactView.add_facts()
-                self.assertEqual(str(cm.exception), "FETCH_URL must be a string")
-
+    def test_invalid_fetch_settings(self):
+        '''Verifies error message response of FetchCatFactView on absence FETCH_URL and FETCH_FLAG'''
+        error = "FETCH_URL and FETCH_FLAG must be valid"
+        test_cases = [
+        {"FETCH_URL": "ht5656we", "FETCH_FLAG": False},
+        {"FETCH_URL": None, "FETCH_FLAG": True},
+        {"FETCH_URL": "ht5656we.", "FETCH_FLAG": None},
+        {"FETCH_URL": "ht5656we.", "FETCH_FLAG": []},
+        {"FETCH_URL": "ht5656we.", "FETCH_FLAG":0},
+        {"FETCH_URL": "ht5656we.", "FETCH_FLAG":''}, 
+         {"FETCH_URL": "ht5656we.", "FETCH_FLAG":{}}, 
+        ]
+        for case in test_cases:
+            with self.subTest(case=case):
+                with self.settings(FETCH_URL=case["FETCH_URL"], FETCH_FLAG=case["FETCH_FLAG"]):
+                    with self.assertRaises(ImproperlyConfigured) as cm:
+                        FetchCatFactView.add_facts()
+                    self.assertEqual(str(cm.exception), error)
+                    
+    def test_invalid_bool_string_settings(self):
+        '''Verifies error message response of FetchCatFactView on invalid FETCH_URL and FETCH_FLAG'''
+        error = "FETCH_URL must be a string and FETCH_FLAG must be a boolean"
+        test_cases = [
+        {"FETCH_URL": "ht5656we", "FETCH_FLAG": "false"},
+        {"FETCH_URL": 345, "FETCH_FLAG": True},
+        ]
+        for case in test_cases:
+            with self.subTest(case=case):
+                with self.settings(FETCH_URL=case["FETCH_URL"], FETCH_FLAG=case["FETCH_FLAG"]):
+                    with self.assertRaises(ImproperlyConfigured) as cm:
+                        FetchCatFactView.add_facts()
+                    self.assertEqual(str(cm.exception), error)
+                    
     def test_http_error_handling(self):
-        with override_settings(FETCH_URL="https://api.com/catfacts", FETCH_FLAG=True):
+        '''Verifies error message response on 404 Not Found error'''
+        with self.settings(FETCH_URL="url", FETCH_FLAG=True):
             with patch('requests.get') as mock_get:
                 # Mock a 404 Not Found response
                 mock_response = MagicMock()
@@ -121,7 +123,8 @@ class FetchCatFactViewTest(APITestCase):
                 mock_get.assert_called()
     
     def test_network_error_handling(self):
-        with override_settings(FETCH_URL="https://api.com/catfacts", FETCH_FLAG=True):
+        '''Verifies error message response on Network error'''
+        with self.settings(FETCH_URL="url", FETCH_FLAG=True):
             with patch('requests.get') as mock_get:
                 # Mock a network error
                 mock_get.side_effect = requests.exceptions.RequestException("Network Error")
@@ -130,7 +133,8 @@ class FetchCatFactViewTest(APITestCase):
                 mock_get.assert_called()
                 
     def test_unexpected_error_handling(self):
-        with override_settings(FETCH_URL="https://api.com/catfacts", FETCH_FLAG=True):
+        '''Verifies error message response on Unexpected error'''
+        with self.settings(FETCH_URL="url", FETCH_FLAG=True):
             with patch('requests.get') as mock_get:
                 # Mock an unexpected exception
                 mock_get.side_effect = Exception("Unexpected Error")
