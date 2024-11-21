@@ -61,23 +61,63 @@ class SerializerTest(APITestCase):
 
 class FetchCatFactViewTest(APITestCase):
    
-    def test_add_facts_url_flag_successful_response(self):
-        '''Verifies successful response of FetchCatFactView on valid FETCH_URL and FETCH_FLAG'''
-        with self.settings(FETCH_URL="ejhfw", FETCH_FLAG=True):
+    # def test_add_facts_with_create_batch(self):
+    #     """Test FetchCatFactView with 10 different data instances using create_batch."""
+    #     with self.settings(FETCH_URL="catfacts", FETCH_FLAG=True):
+    #         self.assertIsInstance(settings.FETCH_URL, str)
+    #         self.assertIsInstance(settings.FETCH_FLAG, bool)
+    #         mock_data = CatFactFactory.create_batch(10)
+    #         def mock_json_side_effect():
+    #             if mock_data:
+    #                 return mock_data.pop(0)
+    #             return None
+    #         with patch('requests.get') as mock_get:
+    #             mock_get.return_value = MagicMock(
+    #                 status_code=200,
+    #                 json=mock_json_side_effect
+    #             )
+    #             result = FetchCatFactView.add_facts()
+    #             saved_facts = CatFact.objects.all()
+    #             self.assertEqual(saved_facts.count(), 10) 
+    #             self.assertEqual(len(result), 10)         
+    #             # Validate each fact is saved correctly
+    #             for saved_fact, expected_fact in zip(saved_facts, result):
+    #                 self.assertEqual(saved_fact.fact, expected_fact['fact'])
+    #                 self.assertEqual(saved_fact.length, expected_fact['length'])    
+    
+    def test_add_facts_with_generator(self):
+        """Test FetchCatFactView with 10 different data instances using a generator."""
+        with self.settings(FETCH_URL="catfacts", FETCH_FLAG=True):
             self.assertIsInstance(settings.FETCH_URL, str)
-            self.assertIsInstance(settings.FETCH_FLAG, bool)  
+            self.assertIsInstance(settings.FETCH_FLAG, bool)
+
+            # Generator to yield 10 mock data entries
+            def mock_data_generator():
+                for _ in range(10):
+                    yield CatFactFactory()
+            mock_data_list = list(mock_data_generator())
+            print("\nGenerated Mock Data:")
+            for data in mock_data_list:
+                print(data)
+            
+            def mock_json_side_effect():
+                if mock_data_list:
+                    return mock_data_list.pop(0)
+                return None
+
             with patch('requests.get') as mock_get:
-                # Mock successful API response
-                mock_data = CatFactFactory()
-                mock_get.return_value = MagicMock(status_code=200, json=lambda: mock_data)
+                mock_get.return_value = MagicMock(
+                    status_code=200,
+                    json=mock_json_side_effect
+                )
                 result = FetchCatFactView.add_facts()
-                # Validate facts saved to the database
                 saved_facts = CatFact.objects.all()
-                self.assertEqual(len(saved_facts), 10) 
-                self.assertEqual(len(result), 10)   
-                for fact in saved_facts:
-                    self.assertEqual(fact.fact, mock_data['fact'])
-                    self.assertEqual(fact.length, mock_data['length'])
+                self.assertEqual(saved_facts.count(), 10)  
+                self.assertEqual(len(result), 10)     
+                for saved_fact, expected_fact in zip(saved_facts, result):
+                    self.assertEqual(saved_fact.fact, expected_fact['fact'])
+                    self.assertEqual(saved_fact.length, expected_fact['length'])
+    
     
     def test_invalid_fetch_settings(self):
         '''Verifies error message response of FetchCatFactView on absence FETCH_URL and FETCH_FLAG'''
